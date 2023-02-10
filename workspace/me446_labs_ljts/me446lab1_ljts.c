@@ -35,6 +35,14 @@ float printtheta1motor = 0;
 float printtheta2motor = 0;
 float printtheta3motor = 0;
 
+float motortheta1 = 0;
+float motortheta2 = 0;
+float motortheta3 = 0;
+
+float theta1 = 0;
+float theta2 = 0;
+float theta3 = 0;
+
 float x = 0;
 float y = 0;
 float z = 0;
@@ -85,6 +93,16 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
     y = (127.0*sin(theta1motor)*(cos(theta3motor) + sin(theta2motor)))/500.0;
     z = (127.0*cos(theta2motor))/500.0 - (127.0*sin(theta3motor))/500.0 + 127.0/500.0;
 
+    motortheta1 = atan2(y,x);
+//    motortheta2 = 1.570796 - atan2((2.0*sqrt((0.064516 - 0.25*x*x - 0.25*y*y - 0.25*(z - 0.254)*(z - 0.254)))),sqrt(((z - 0.254)*(z - 0.254) + x*x + y*y)))*1.0;
+    //motortheta2 = theta2motor;
+    motortheta2 = 1.570796 - 1.0*atan2(1.0*z - 0.254, sqrt(x*x + y*y)) - 1.0*atan2(2.0*sqrt(0.064516 - 0.25*x*x - 0.25*y*y - 0.25*(z - 0.254)*(z-0.254)), sqrt((z - 0.254)*(z - 0.254) + x*x + y*y));
+    motortheta3 = 1.0*atan2(2.0*sqrt(0.064516 - 0.25*x*x - 0.25*y*y - 0.25*(z - 0.254)*(z-0.254)), sqrt((z - 0.254)*(z-0.254) + x*x + y*y)) - 1.0*atan2(1.0*z - 0.254, sqrt(x*x + y*y));
+
+    theta1 = motortheta1;
+    theta2 = motortheta2 - PI/2;
+    theta3 = motortheta3 - motortheta2 + PI/2;
+
     Simulink_PlotVar1 = theta1motor;
     Simulink_PlotVar2 = theta2motor;
     Simulink_PlotVar3 = theta3motor;
@@ -94,6 +112,6 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
 }
 
 void printing(void){
-    serial_printf(&SerialA, "%.2f %.2f,%.2f,%.2f,%.2f,%.2f   \n\r",printtheta1motor*180/PI,printtheta2motor*180/PI,printtheta3motor*180/PI, x,y,z);
+    serial_printf(&SerialA, "%.2f %.2f %.2f | %.2f %.2f %.2f | %.2f %.2f %.2f | %.2f %.2f %.2f  \n\r",printtheta1motor*180/PI,printtheta2motor*180/PI,printtheta3motor*180/PI, x,y,z, motortheta1*180/PI, motortheta2*180/PI, motortheta3*180/PI, theta1*180/PI, theta2*180/PI, theta3*180/PI);
 }
 
