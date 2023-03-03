@@ -95,8 +95,8 @@ float Ik2 = 0;
 float Ik3 = 0;
 
 float ki1 = 0;
-float ki2 = 0;
-float ki3 = 0;
+float ki2 = 40000;
+float ki3 = 10000;
 
 // Assign these float to the values you would like to plot in Simulink
 float Simulink_PlotVar1 = 0;
@@ -104,14 +104,24 @@ float Simulink_PlotVar2 = 0;
 float Simulink_PlotVar3 = 0;
 float Simulink_PlotVar4 = 0;
 
+float threshold1 = 0.01;
+float threshold2 = 0.03;
+float threshold3 = 0.02;
+
+float thetaddot = 0;
+
+float J1 = 0.0167;
+float J2 = 0.03;
+float J3 = 0.0128;
+
+float a2 = 1.5;
+float a3 = -1;
+
+float t = 0.0;
+int home_traj = 0;
 
 // This function is called every 1 ms
 void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float *tau2,float *tau3, int error) {
-
-
-    *tau1 = 0.0;
-    *tau2 = 0.0;
-    *tau3 = 0.0;
 
     //Motor torque limitation(Max: 5 Min: -5)
 
@@ -156,6 +166,8 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
     theta2 = motortheta2 - PI/2;
     theta3 = motortheta3 - motortheta2 + PI/2;
 
+
+
     Omega1 = (theta1motor - Theta1_old)/0.001;
     Omega1 = (Omega1 + Omega1_old1 + Omega1_old2)/3.0;
     Theta1_old = theta1motor;
@@ -177,44 +189,81 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
     Omega3_old2 = Omega3_old1;
     Omega3_old1 = Omega3;
 
-    if((mycount%1000)==0) {
-        if(theta1d > 0.1) {
-            theta1d = 0;
+
+//    t = mycount;
+
+    if(mycount%2000 == 0) {
+        if(home_traj == 1) {
+            home_traj = 0;
         } else {
-            theta1d = PI/6;
+            home_traj = 1;
         }
     }
 
-    if((mycount%1000)==0) {
-        if(theta2d > 0.1) {
-            theta2d = 0;
-        } else {
-            theta2d = PI/6;
-        }
+    t = mycount%2000 / 1000;
+    if(home_traj) {
+        theta1d = 0.0;
+    } else {
+        theta1d = a2*pow(t,2)+a3*pow(t,3);
     }
 
-    if((mycount%1000)==0) {
-        if(theta3d > 0.1) {
-            theta3d = 0;
-        } else {
-            theta3d = PI/6;
-        }
-    }
+
+//    if((mycount%1000)==0) {
+//        if(theta1d > 0.1) {
+//            theta1d = a2*t^2+a3*t.^3;;
+//        } else {
+//            theta1d = PI/6;
+//        }
+//    }
+//
+//    if((mycount%1000)==0) {
+//        if(theta2d > 0.1) {
+//            theta2d = 0;
+//        } else {
+//            theta2d = PI/6;
+//        }
+//    }
+//
+//    if((mycount%1000)==0) {
+//        if(theta3d > 0.1) {
+//            theta3d = 0;
+//        } else {
+//            theta3d = PI/6;
+//        }
+//    }
 
     err1 = theta1d-theta1motor;
-    err2 = theta2d-theta2motor;
-    err3 = theta2d-theta2motor;
+    err2 = theta1d-theta2motor;
+    err3 = theta1d-theta3motor;
 
-    Ik1 = Ikold1+(err1-err_old1)/2*0.001;
-    Ik2 = Ikold2+(err2-err_old2)/2*0.001;
-    Ik3 = Ikold3+(err3-err_old3)/2*0.001;
+    Ik1 = Ikold1+(err1-err_old1)/2.0*0.001;
+    Ik2 = Ikold2+(err2-err_old2)/2.0*0.001;
+    Ik3 = Ikold3+(err3-err_old3)/2.0*0.001;
 
+    thetaddot = 2*a2+6*a3*mycount/1000;
     // Case where
+    if (fabs(err1) < threshold1) {
+        ptau1 = kp1*(err1) - kd1*Omega1 + ki1*Ik1+thetaddot*J1;
+    }  else {
+        Ik1 = 0;
+        ptau1 = kp1*(err1) - kd1*Omega1+thetaddot*J1;
+    }
 
-    ptau1 = kp1*(theta1d-theta1motor) - kd1*Omega1 + ki1*Ik1;
-    ptau2 = kp2*(theta2d-theta2motor) - kd2*Omega2 + ki2*Ik2;
-    ptau3 = kp3*(theta3d-theta3motor) - kd3*Omega3 + ki3*Ik3;
+    if (fabs(err2) < threshold2) {
+        ptau2 = kp2*(err2) - kd2*Omega2 + ki2*Ik2+thetaddot*J2;
+    }  else {
+        Ik2 = 0;
+        ptau2 = kp2*(err2) - kd2*Omega2+thetaddot*J2;
+    }
 
+    if (fabs(err3) < threshold3) {
+        ptau3 = kp3*(err3) - kd3*Omega3 + ki3*Ik3+thetaddot*J3;
+    }  else {
+        Ik3 = 0;
+        ptau3 = kp3*(err3) - kd3*Omega3+thetaddot*J3;
+    }
+
+    // Saturation of torque values
     if (ptau1 > 5) {
         ptau1 = 5;
     } else if (ptau1 < -5) {
