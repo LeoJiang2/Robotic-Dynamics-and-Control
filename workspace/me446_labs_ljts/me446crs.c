@@ -262,14 +262,14 @@ void main(void)
     // Step 1. Initialize System Control:
     // PLL, WatchDog, enable Peripheral Clocks
     // This example function is found in the DSP2833x_SysCtrl.c file.
-    //    InitSysCtrl();
+    InitSysCtrl();
 
     //
     // Step 2. Initialize GPIO:
     // This example function is found in the DSP2833x_Gpio.c file and
     // illustrates how to set the GPIO to it's default state.
     //
-    // InitGpio();  // Skipped for this example
+    //InitGpio();  // Skipped for this example
 
     //
     // Step 3. Clear all interrupts and initialize PIE vector table:

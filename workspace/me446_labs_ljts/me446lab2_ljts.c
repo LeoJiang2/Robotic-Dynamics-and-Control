@@ -43,7 +43,7 @@ float theta1 = 0;
 float theta2 = 0;
 float theta3 = 0;
 
-float x = 0;
+//float x = 0;
 float y = 0;
 float z = 0;
 
@@ -97,6 +97,8 @@ float Ik3 = 0;
 float ki1 = 0;
 float ki2 = 40000;
 float ki3 = 10000;
+//float ki2 = 0;
+//float ki3 = 0;
 
 // Assign these float to the values you would like to plot in Simulink
 float Simulink_PlotVar1 = 0;
@@ -114,11 +116,16 @@ float J1 = 0.0167;
 float J2 = 0.03;
 float J3 = 0.0128;
 
-float a2 = 1.5;
-float a3 = -1;
+float a2 = 0;
+float a3 = 0;
+
+float a0 = 0;
+float a1 = 0;
 
 float t = 0.0;
 int home_traj = 0;
+
+float x = 0.4;
 
 // This function is called every 1 ms
 void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float *tau2,float *tau3, int error) {
@@ -150,14 +157,19 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
     printtheta2motor = theta2motor;
     printtheta3motor = theta3motor;
 
-    x = (127.0*cos(theta1motor)*(cos(theta3motor) + sin(theta2motor)))/500.0;
-    y = (127.0*sin(theta1motor)*(cos(theta3motor) + sin(theta2motor)))/500.0;
-    z = (127.0*cos(theta2motor))/500.0 - (127.0*sin(theta3motor))/500.0 + 127.0/500.0;
+//    x = (127.0*cos(theta1motor)*(cos(theta3motor) + sin(theta2motor)))/500.0;
+//    y = (127.0*sin(theta1motor)*(cos(theta3motor) + sin(theta2motor)))/500.0;
+//    z = (127.0*cos(theta2motor))/500.0 - (127.0*sin(theta3motor))/500.0 + 127.0/500.0;
+    //t = (mycount%(6283*4))*0.001;
+    t = mycount*0.001;
+
+    x = 0.254;
+    y = 0.1*sin(2*PI*.25*t + PI/4.0);
+    z = .25 + 0.1*sin((4.0/3.0)*2*PI*.25*t);
+//    x = 0.3;
 
     // Calculated motor thetas with inverse kinematics
     motortheta1 = atan2(y,x);
-//    motortheta2 = 1.570796 - atan2((2.0*sqrt((0.064516 - 0.25*x*x - 0.25*y*y - 0.25*(z - 0.254)*(z - 0.254)))),sqrt(((z - 0.254)*(z - 0.254) + x*x + y*y)))*1.0;
-    //motortheta2 = theta2motor;
     motortheta2 = 1.570796 - 1.0*atan2(1.0*z - 0.254, sqrt(x*x + y*y)) - 1.0*atan2(2.0*sqrt(0.064516 - 0.25*x*x - 0.25*y*y - 0.25*(z - 0.254)*(z-0.254)), sqrt((z - 0.254)*(z - 0.254) + x*x + y*y));
     motortheta3 = 1.0*atan2(2.0*sqrt(0.064516 - 0.25*x*x - 0.25*y*y - 0.25*(z - 0.254)*(z-0.254)), sqrt((z - 0.254)*(z-0.254) + x*x + y*y)) - 1.0*atan2(1.0*z - 0.254, sqrt(x*x + y*y));
 
@@ -166,7 +178,9 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
     theta2 = motortheta2 - PI/2;
     theta3 = motortheta3 - motortheta2 + PI/2;
 
-
+    theta1d = motortheta1;
+    theta2d = motortheta2;
+    theta3d = motortheta3;
 
     Omega1 = (theta1motor - Theta1_old)/0.001;
     Omega1 = (Omega1 + Omega1_old1 + Omega1_old2)/3.0;
@@ -190,22 +204,33 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
     Omega3_old1 = Omega3;
 
 
-//    t = mycount;
+//    t = (mycount%2000)*0.001;
+//
+//    y = 0.1*sin(3*t+PI/4);
+//    z = 0.1*sin(4*t);
+//    x = 0.2;
 
-    if(mycount%2000 == 0) {
-        if(home_traj == 1) {
-            home_traj = 0;
-        } else {
-            home_traj = 1;
-        }
-    }
 
-    t = mycount%2000 / 1000;
-    if(home_traj) {
-        theta1d = 0.0;
-    } else {
-        theta1d = a2*pow(t,2)+a3*pow(t,3);
-    }
+
+//    if ( t < 1) {
+//        home_traj = 0;
+//    } else {
+//        home_traj = 1;
+//    }
+//
+//    if(home_traj) {
+//        a3 = 1;
+//        a2 = -4.5;
+//        a1 = 6;
+//        a0 = -2;
+//        theta1d = a0+a1*t+a2*pow(t,2)+a3*pow(t,3);
+//        thetaddot = 2*a2+6*a3*t;
+//    } else {
+//        a2 = 1.5;
+//        a3 = -1;
+//        theta1d = a2*pow(t,2)+a3*pow(t,3);
+//        thetaddot = 2*a2+6*a3*t;
+//    }
 
 
 //    if((mycount%1000)==0) {
@@ -232,54 +257,68 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
 //        }
 //    }
 
+//    err1 = theta1d-theta1motor;
+//    err2 = theta1d-theta2motor;
+//    err3 = theta1d-theta3motor;
+
     err1 = theta1d-theta1motor;
-    err2 = theta1d-theta2motor;
-    err3 = theta1d-theta3motor;
+    err2 = theta2d-theta2motor;
+    err3 = theta3d-theta3motor;
 
     Ik1 = Ikold1+(err1-err_old1)/2.0*0.001;
     Ik2 = Ikold2+(err2-err_old2)/2.0*0.001;
     Ik3 = Ikold3+(err3-err_old3)/2.0*0.001;
 
-    thetaddot = 2*a2+6*a3*mycount/1000;
-    // Case where
-    if (fabs(err1) < threshold1) {
-        ptau1 = kp1*(err1) - kd1*Omega1 + ki1*Ik1+thetaddot*J1;
-    }  else {
-        Ik1 = 0;
-        ptau1 = kp1*(err1) - kd1*Omega1+thetaddot*J1;
-    }
+//feed forward
+//    // Case where
+//    if (fabs(err1) < threshold1) {
+//        ptau1 = kp1*(err1) - kd1*Omega1 + ki1*Ik1+thetaddot*J1;
+//    }  else {
+//        Ik1 = 0;
+//        ptau1 = kp1*(err1) - kd1*Omega1+thetaddot*J1;
+//    }
+//
+//    if (fabs(err2) < threshold2) {
+//        ptau2 = kp2*(err2) - kd2*Omega2 + ki2*Ik2+thetaddot*J2;
+//    }  else {
+//        Ik2 = 0;
+//        ptau2 = kp2*(err2) - kd2*Omega2+thetaddot*J2;
+//    }
+//
+//    if (fabs(err3) < threshold3) {
+//        ptau3 = kp3*(err3) - kd3*Omega3 + ki3*Ik3+thetaddot*J3;
+//    }  else {
+//        Ik3 = 0;
+//        ptau3 = kp3*(err3) - kd3*Omega3+thetaddot*J3;
+//    }
 
-    if (fabs(err2) < threshold2) {
-        ptau2 = kp2*(err2) - kd2*Omega2 + ki2*Ik2+thetaddot*J2;
-    }  else {
-        Ik2 = 0;
-        ptau2 = kp2*(err2) - kd2*Omega2+thetaddot*J2;
-    }
-
-    if (fabs(err3) < threshold3) {
-        ptau3 = kp3*(err3) - kd3*Omega3 + ki3*Ik3+thetaddot*J3;
-    }  else {
-        Ik3 = 0;
-        ptau3 = kp3*(err3) - kd3*Omega3+thetaddot*J3;
-    }
-
+//    fun
+    ptau1 = kp1*(err1) - kd1*Omega1;
+    ptau2 = kp2*(err2) - kd2*Omega2;
+    ptau3 = kp3*(err3) - kd3*Omega3;
     // Saturation of torque values
     if (ptau1 > 5) {
         ptau1 = 5;
+        Ik1 = Ikold1;
     } else if (ptau1 < -5) {
         ptau1 = -5;
+        Ik1 = Ikold1;
     }
 
     if (ptau2 > 5) {
         ptau2 = 5;
+        Ik2 = Ikold2;
     } else if (ptau2 < -5) {
         ptau2 = -5;
+        Ik2 = Ikold2;
     }
 
     if (ptau3 > 5) {
         ptau3 = 5;
+        Ik3 = Ikold3;
     } else if (ptau3 < -5) {
         ptau3 = -5;
+        Ik3 = Ikold3;
     }
 
     *tau1 = ptau1;
@@ -294,11 +333,15 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
     err_old2 = err2;
     err_old3 = err3;
 
-    Simulink_PlotVar1 = theta1motor;
-    Simulink_PlotVar2 = theta2motor;
-    Simulink_PlotVar3 = theta3motor;
-    Simulink_PlotVar4 = theta1d;
+//    Simulink_PlotVar1 = theta1motor;
+//    Simulink_PlotVar2 = theta2motor;
+//    Simulink_PlotVar3 = theta3motor;
+//    Simulink_PlotVar4 = theta1d;
 
+    Simulink_PlotVar1 = motortheta1;
+    Simulink_PlotVar2 = motortheta2;
+    Simulink_PlotVar3 = motortheta3;
+    Simulink_PlotVar4 = theta1motor;
     mycount++;
 
 }
