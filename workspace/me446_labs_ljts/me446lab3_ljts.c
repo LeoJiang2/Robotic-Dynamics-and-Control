@@ -67,12 +67,14 @@ float theta1d = 0;
 float theta2d = 0;
 float theta3d = 0;
 
+float thetadot = 0.0;
+
 float kp1 = 40;
-float kp2 = 45;
-float kp3 = 80;
+float kp2 = 2000;
+float kp3 = 2000;
 float kd1 = 1.9;
-float kd2 = 1.9;
-float kd3 = 1.9;
+float kd2 = 60;
+float kd3 = 60;
 
 float ptau1 = 0;
 float ptau2 = 0;
@@ -86,6 +88,10 @@ float err1 = 0;
 float err2 = 0;
 float err3 = 0;
 
+float err_dot1 = 0.0;
+float err_dot2 = 0.0;
+float err_dot3 = 0.0;
+
 float Ikold1 = 0;
 float Ikold2 = 0;
 float Ikold3 = 0;
@@ -95,8 +101,8 @@ float Ik2 = 0;
 float Ik3 = 0;
 
 float ki1 = 0;
-float ki2 = 40000;
-float ki3 = 10000;
+float ki2 = 0;
+float ki3 = 0;
 //float ki2 = 0;
 //float ki3 = 0;
 
@@ -110,12 +116,7 @@ float threshold1 = 0.01;
 float threshold2 = 0.03;
 float threshold3 = 0.02;
 
-float thetadot = 0.0;
 float thetaddot = 0;
-
-float err_dot1 = 0.0;
-float err_dot2 = 0.0;
-float err_dot3 = 0.0;
 
 float J1 = 0.0167;
 float J2 = 0.03;
@@ -131,6 +132,38 @@ float t = 0.0;
 int home_traj = 0;
 
 float x = 0.4;
+
+float Viscous_positive1 = 0.22;
+float Viscous_negative1 = 0.22;
+float Coulomb_positive1 = 0.3637;
+float Coulomb_negative1 = -0.2948;
+
+float Viscous_positive2 = 0.2500;
+float Viscous_negative2 = 0.287;
+float Coulomb_positive2 = 0.45;
+float Coulomb_negative2 = -0.47;
+
+float Viscous_positive3 = 0.1922;
+float Viscous_negative3 = 0.2132;
+float Coulomb_positive3 = 0.440;
+float Coulomb_negative3 = -0.440;
+
+float u_fric1 = 0.0;
+float u_fric2 = 0.0;
+float u_fric3 = 0.0;
+
+float v_co_1 = 3.6;
+float v_co_2 = 3.6;
+float v_co_3 = 3.3;
+
+float p1 = 0.03;
+float p2 = 0.0128;
+float p3 = 0.0076;
+float p4 = 0.0753;
+float p5 = 0.0298;
+
+float at2 = 0.0;
+float at3 = 0.0;
 
 // This function is called every 1 ms
 void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float *tau2,float *tau3, int error) {
@@ -166,11 +199,8 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
 //    y = (127.0*sin(theta1motor)*(cos(theta3motor) + sin(theta2motor)))/500.0;
 //    z = (127.0*cos(theta2motor))/500.0 - (127.0*sin(theta3motor))/500.0 + 127.0/500.0;
     //t = (mycount%(6283*4))*0.001;
-    t = mycount*0.001;
+//    t = mycount*0.001;
 
-    x = 0.254;
-    y = 0.1*sin(2*PI*.25*t + PI/4.0);
-    z = .25 + 0.1*sin((4.0/3.0)*2*PI*.25*t);
 //    x = 0.3;
 
     // Calculated motor thetas with inverse kinematics
@@ -183,12 +213,10 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
     theta2 = motortheta2 - PI/2;
     theta3 = motortheta3 - motortheta2 + PI/2;
 
-    // Set desired theta to IK calculated thetas for fun trajectory
-    theta1d = motortheta1;
-    theta2d = motortheta2;
-    theta3d = motortheta3;
+//    theta1d = motortheta1;
+//    theta2d = motortheta2;
+//    theta3d = motortheta3;
 
-    // Velocity filtering
     Omega1 = (theta1motor - Theta1_old)/0.001;
     Omega1 = (Omega1 + Omega1_old1 + Omega1_old2)/3.0;
     Theta1_old = theta1motor;
@@ -211,42 +239,45 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
     Omega3_old1 = Omega3;
 
 
-    // Cubic trajectory; this moves all the joints from 0 to 0.5 in a cubic motion
-
-//    t = (mycount%2000)*0.001;
+    t = (mycount%2000)*0.001;
 //
-//    if ( t < 1) {
-//        home_traj = 0;
-//    } else {
-//        home_traj = 1;
-//    }
-//
-//    if(home_traj) {
-//        a3 = 1;
-//        a2 = -4.5;
-//        a1 = 6;
-//        a0 = -2;
-//        theta1d = a0+a1*t+a2*pow(t,2)+a3*pow(t,3);
-//        thetadot = a1+2*a2*t+3*a3*pow(t,2);
-//        thetaddot = 2*a2+6*a3*t;
-//    } else {
-//        a2 = 1.5;
-//        a3 = -1;
-//        theta1d = a2*pow(t,2)+a3*pow(t,3);
-//        thetadot = 2*a2*t+3*a3*pow(t,2);
-//        thetaddot = 2*a2+6*a3*t;
-//    }
+//    y = 0.1*sin(3*t+PI/4);
+//    z = 0.1*sin(4*t);
+//    x = 0.2;
 
-    // Step input trajectory
+
+    // cubic traj
+    if ( t < 1) {
+        home_traj = 0;
+    } else {
+        home_traj = 1;
+    }
+
+    if(home_traj) {
+        a3 = 1;
+        a2 = -4.5;
+        a1 = 6;
+        a0 = -2;
+        theta1d = a0+a1*t+a2*pow(t,2)+a3*pow(t,3);
+        thetadot = a1+2*a2*t+3*a3*pow(t,2);
+        thetaddot = 2*a2+6*a3*t;
+    } else {
+        a2 = 1.5;
+        a3 = -1;
+        theta1d = a2*pow(t,2)+a3*pow(t,3);
+        thetadot = 2*a2*t+3*a3*pow(t,2);
+        thetaddot = 2*a2+6*a3*t;
+    }
+
+
 //    if((mycount%1000)==0) {
 //        if(theta1d > 0.1) {
-//            theta1d = 0;
+//            theta1d = a2*t^2+a3*t.^3;;
 //        } else {
 //            theta1d = PI/6;
 //        }
 //    }
 //
-//    //Step function
 //    if((mycount%1000)==0) {
 //        if(theta2d > 0.1) {
 //            theta2d = 0;
@@ -263,15 +294,13 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
 //        }
 //    }
 
-    // Error when using a single desired trajectory for all 3 thetas (cubic trajectory only)
 //    err1 = theta1d-theta1motor;
 //    err2 = theta1d-theta2motor;
 //    err3 = theta1d-theta3motor;
 
-    // Error for 3 separate desired theta functions (step input and fun trajectory)
     err1 = theta1d-theta1motor;
-    err2 = theta2d-theta2motor;
-    err3 = theta3d-theta3motor;
+    err2 = theta1d-theta2motor;
+    err3 = theta1d-theta3motor;
 
     err_dot1 = thetadot - Omega1;
     err_dot2 = thetadot - Omega2;
@@ -281,84 +310,98 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
     Ik2 = Ikold2+(err2-err_old2)/2.0*0.001;
     Ik3 = Ikold3+(err3-err_old3)/2.0*0.001;
 
-//feed forward control
-    if (fabs(err1) < threshold1) {
-        ptau1 = kp1*(err1) + kd1*err_dot1 + ki1*Ik1+thetaddot*J1;
-    }  else {
-        Ik1 = 0;
-        ptau1 = kp1*(err1) + kd1*err_dot1+thetaddot*J1;
+    //friction
+    if (Omega1 > 0.1) {
+     u_fric1 = Viscous_positive1*Omega1 + Coulomb_positive1;
+    } else if (Omega1 < -0.1) {
+     u_fric1 = Viscous_negative1*Omega1 + Coulomb_negative1;
+    } else {
+     u_fric1 = 3.6*Omega1;
     }
 
-    if (fabs(err2) < threshold2) {
-        ptau2 = kp2*(err2) + kd2*err_dot2 + ki2*Ik2+thetaddot*J2;
-    }  else {
-        Ik2 = 0;
-        ptau2 = kp2*(err2) + kd2*err_dot2+thetaddot*J2;
+    if (Omega2 > 0.05) {
+     u_fric2 = Viscous_positive2*Omega2 + Coulomb_positive2;
+    } else if (Omega2 < -0.05) {
+     u_fric2 = Viscous_negative2*Omega2 + Coulomb_negative2;
+    } else {
+     u_fric2 = v_co_2*Omega2;
     }
 
-    if (fabs(err3) < threshold3) {
-        ptau3 = kp3*(err3) + kd3*err_dot3 + ki3*Ik3+thetaddot*J3;
-    }  else {
-        Ik3 = 0;
-        ptau3 = kp3*(err3) + kd3*err_dot3+thetaddot*J3;
+    if (Omega3 > 0.05) {
+     u_fric3 = Viscous_positive3*Omega3 + Coulomb_positive3;
+    } else if (Omega3 < -0.05) {
+     u_fric3 = Viscous_negative3*Omega3 + Coulomb_negative3;
+    } else {
+     u_fric3 = v_co_3*Omega3;
     }
 
-// PID Control for step input
+//    *tau1 = u_fric1;
+//    *tau2 = u_fric2;
+//    *tau3 = u_fric3;
+
+
+//    // feed forward
 //    if (fabs(err1) < threshold1) {
-//        ptau1 = kp1*(err1) - kd1*Omega1 + ki1*Ik1;
+//        ptau1 = kp1*(err1) - kd1*Omega1 + ki1*Ik1+thetaddot*J1;
 //    }  else {
 //        Ik1 = 0;
-//        ptau1 = kp1*(err1) - kd1*Omega1;
+//        ptau1 = kp1*(err1) - kd1*Omega1+thetaddot*J1;
 //    }
+//
 //    if (fabs(err2) < threshold2) {
-//        ptau2 = kp2*(err2) - kd2*Omega2 + ki2*Ik2;
+//        ptau2 = kp2*(err2) - kd2*Omega2 + ki2*Ik2+thetaddot*J2;
 //    }  else {
 //        Ik2 = 0;
-//        ptau2 = kp2*(err2) - kd2*Omega2;
+//        ptau2 = kp2*(err2) - kd2*Omega2+thetaddot*J2;
 //    }
 //
 //    if (fabs(err3) < threshold3) {
-//        ptau3 = kp3*(err3) - kd3*Omega3 + ki3*Ik3;
+//        ptau3 = kp3*(err3) - kd3*Omega3 + ki3*Ik3+thetaddot*J3;
 //    }  else {
 //        Ik3 = 0;
-//        ptau3 = kp3*(err3) - kd3*Omega3;
+//        ptau3 = kp3*(err3) - kd3*Omega3+thetaddot*J3;
 //    }
 
 
-//    PD control for step trajectory; replace omega1 with errordot for fun trajectory
+    // feed forward
+
+    ptau1 = kp1*(err1) + kd1*err_dot1+thetaddot*J1;
+
+    at2 = kp2*(err2) + kd2*err_dot2+thetaddot;
+
+    at3 = kp3*(err3) + kd3*err_dot3+thetaddot;
+
+    ptau2 = p1*at2-(p3*sin(theta3motor-theta2motor))*at3 - p3*cos(theta3motor-theta2motor)*Omega3*Omega3 - p4*9.8*sin(theta2motor);
+    ptau3 = -p3*sin(theta3motor-theta2motor)*at2+p2*at3 - p3*cos(theta3motor-theta2motor)*Omega2*Omega2 - p5*9.8*sin(theta3motor);
+
+    ////    fun
 //    ptau1 = kp1*(err1) - kd1*Omega1;
 //    ptau2 = kp2*(err2) - kd2*Omega2;
 //    ptau3 = kp3*(err3) - kd3*Omega3;
-
-    //    PID control for step trajectory but i dont think this works
-//        ptau1 = kp1*(err1) - kd1*Omega1 + ki1*Ik1;
-//        ptau2 = kp2*(err2) - kd2*Omega2 + ki2*Ik2;
-//        ptau3 = kp3*(err3) - kd3*Omega3 + ki3*Ik3;
-
     // Saturation of torque values
-    if (ptau1 > 5) {
-        ptau1 = 5;
-        Ik1 = Ikold1;
-    } else if (ptau1 < -5) {
-        ptau1 = -5;
-        Ik1 = Ikold1;
-    }
-
-    if (ptau2 > 5) {
-        ptau2 = 5;
-        Ik2 = Ikold2;
-    } else if (ptau2 < -5) {
-        ptau2 = -5;
-        Ik2 = Ikold2;
-    }
-
-    if (ptau3 > 5) {
-        ptau3 = 5;
-        Ik3 = Ikold3;
-    } else if (ptau3 < -5) {
-        ptau3 = -5;
-        Ik3 = Ikold3;
-    }
+//    if (ptau1 > 5) {
+//        ptau1 = 5;
+//        Ik1 = Ikold1;
+//    } else if (ptau1 < -5) {
+//        ptau1 = -5;
+//        Ik1 = Ikold1;
+//    }
+//
+//    if (ptau2 > 5) {
+//        ptau2 = 5;
+//        Ik2 = Ikold2;
+//    } else if (ptau2 < -5) {
+//        ptau2 = -5;
+//        Ik2 = Ikold2;
+//    }
+//
+//    if (ptau3 > 5) {
+//        ptau3 = 5;
+//        Ik3 = Ikold3;
+//    } else if (ptau3 < -5) {
+//        ptau3 = -5;
+//        Ik3 = Ikold3;
+//    }
 
     *tau1 = ptau1;
     *tau2 = ptau2;
@@ -372,15 +415,15 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
     err_old2 = err2;
     err_old3 = err3;
 
+//    Simulink_PlotVar1 = theta1motor;
+//    Simulink_PlotVar2 = theta2motor;
+//    Simulink_PlotVar3 = theta3motor;
+//    Simulink_PlotVar4 = theta1d;
+
     Simulink_PlotVar1 = theta1motor;
     Simulink_PlotVar2 = theta2motor;
-    Simulink_PlotVar3 = theta1d;
-    Simulink_PlotVar4 = theta2d;
-
-//    Simulink_PlotVar1 = motortheta1;
-//    Simulink_PlotVar2 = motortheta2;
-//    Simulink_PlotVar3 = motortheta3;
-//    Simulink_PlotVar4 = theta1motor;
+    Simulink_PlotVar3 = theta3motor;
+    Simulink_PlotVar4 = theta1d;
     mycount++;
 
 }
