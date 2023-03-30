@@ -69,9 +69,9 @@ float theta3d = 0;
 
 float thetadot = 0.0;
 
-float kp1 = 40;
-float kp2 = 2000;
-float kp3 = 2000;
+float kp1 = 50;
+float kp2 = 2400;
+float kp3 = 12000;
 float kd1 = 1.9;
 float kd2 = 60;
 float kd3 = 60;
@@ -164,6 +164,56 @@ float p5 = 0.0298;
 
 float at2 = 0.0;
 float at3 = 0.0;
+float qd = 0;
+float qddot = 0;
+float qdddot = 0;
+
+float sintheta1=0;
+float sintheta32 = 0;
+float costheta32 = 0;
+
+float step1 = 0;
+
+typedef struct steptraj_s {
+    long double b[5];
+    long double a[5];
+    long double xk[5];
+    long double yk[5];
+    float qd_old;
+    float qddot_old;
+    int size;
+} steptraj_t;
+
+steptraj_t trajectory = {4.7698076658265394e-08L,1.9079230663306158e-07L,2.8618845994959235e-07L,1.9079230663306158e-07L,4.7698076658265394e-08L,
+                        1.0000000000000000e+00L,-3.8817733990147785e+00L,5.6505617704870286e+00L,-3.6557000616943993e+00L,8.8691245339137526e-01L,
+                        0,0,0,0,0,
+                        0,0,0,0,0,
+                        0,
+                        0,
+                        5};
+
+// this function must be called every 1ms.
+void implement_discrete_tf(steptraj_t *traj, float step, float *qd, float *qd_dot, float *qd_ddot) {
+    int i = 0;
+
+    traj->xk[0] = step;
+    traj->yk[0] = traj->b[0]*traj->xk[0];
+    for (i = 1;i<traj->size;i++) {
+        traj->yk[0] = traj->yk[0] + traj->b[i]*traj->xk[i] - traj->a[i]*traj->yk[i];
+    }
+
+    for (i = (traj->size-1);i>0;i--) {
+        traj->xk[i] = traj->xk[i-1];
+        traj->yk[i] = traj->yk[i-1];
+    }
+
+    *qd = traj->yk[0];
+    *qd_dot = (*qd - traj->qd_old)*1000;  //0.001 sample period
+    *qd_ddot = (*qd_dot - traj->qddot_old)*1000;
+
+    traj->qd_old = *qd;
+    traj->qddot_old = *qd_dot;
+}
 
 // This function is called every 1 ms
 void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float *tau2,float *tau3, int error) {
@@ -245,29 +295,42 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
 //    z = 0.1*sin(4*t);
 //    x = 0.2;
 
-
-    // cubic traj
-    if ( t < 1) {
-        home_traj = 0;
-    } else {
-        home_traj = 1;
+//    Step input trajectory
+    if((mycount%4000)==0) {
+        if(step1 > 0.1) {
+            step1 = 0;
+        } else {
+            step1 = PI/6;
+        }
     }
 
-    if(home_traj) {
-        a3 = 1;
-        a2 = -4.5;
-        a1 = 6;
-        a0 = -2;
-        theta1d = a0+a1*t+a2*pow(t,2)+a3*pow(t,3);
-        thetadot = a1+2*a2*t+3*a3*pow(t,2);
-        thetaddot = 2*a2+6*a3*t;
-    } else {
-        a2 = 1.5;
-        a3 = -1;
-        theta1d = a2*pow(t,2)+a3*pow(t,3);
-        thetadot = 2*a2*t+3*a3*pow(t,2);
-        thetaddot = 2*a2+6*a3*t;
-    }
+    implement_discrete_tf(&trajectory, step1, &qd, &qddot, &qdddot);
+    theta1d = qd;
+    thetadot = qddot;
+    thetaddot = qdddot;
+
+    // cubic trajectory oscillating between two points
+//    if (t < 1) {
+//        home_traj = 0;
+//    } else {
+//        home_traj = 1;
+//    }
+//
+//    if(home_traj) {
+//        a3 = 1;
+//        a2 = -4.5;
+//        a1 = 6;
+//        a0 = -2;
+//        theta1d = a0+a1*t+a2*pow(t,2)+a3*pow(t,3);
+//        thetadot = a1+2*a2*t+3*a3*pow(t,2);
+//        thetaddot = 2*a2+6*a3*t;
+//    } else {
+//        a2 = 1.5;
+//        a3 = -1;
+//        theta1d = a2*pow(t,2)+a3*pow(t,3);
+//        thetadot = 2*a2*t+3*a3*pow(t,2);
+//        thetaddot = 2*a2+6*a3*t;
+//    }
 
 
 //    if((mycount%1000)==0) {
@@ -365,14 +428,19 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
 
     // feed forward
 
+
+
+
     ptau1 = kp1*(err1) + kd1*err_dot1+thetaddot*J1;
 
     at2 = kp2*(err2) + kd2*err_dot2+thetaddot;
 
     at3 = kp3*(err3) + kd3*err_dot3+thetaddot;
 
-    ptau2 = p1*at2-(p3*sin(theta3motor-theta2motor))*at3 - p3*cos(theta3motor-theta2motor)*Omega3*Omega3 - p4*9.8*sin(theta2motor);
-    ptau3 = -p3*sin(theta3motor-theta2motor)*at2+p2*at3 - p3*cos(theta3motor-theta2motor)*Omega2*Omega2 - p5*9.8*sin(theta3motor);
+    sintheta32 = sin(theta3motor-theta2motor);
+    costheta32 = cos(theta3motor-theta2motor);
+    ptau2 = p1*at2-(p3*sintheta32)*at3 - p3*costheta32*Omega3*Omega3 - p4*9.8*sin(theta2motor);
+    ptau3 = -p3*sintheta32*at2+p2*at3 - p3*costheta32*Omega2*Omega2 - p5*9.8*sin(theta3motor);
 
     ////    fun
 //    ptau1 = kp1*(err1) - kd1*Omega1;
@@ -415,15 +483,17 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
     err_old2 = err2;
     err_old3 = err3;
 
+    // When we want to plot error
+    Simulink_PlotVar1 = err1;
+    Simulink_PlotVar2 = err2;
+    Simulink_PlotVar3 = err3;
+    Simulink_PlotVar4 = theta1d;
+
+    // When we want to plot actual vs desired angles
 //    Simulink_PlotVar1 = theta1motor;
 //    Simulink_PlotVar2 = theta2motor;
 //    Simulink_PlotVar3 = theta3motor;
 //    Simulink_PlotVar4 = theta1d;
-
-    Simulink_PlotVar1 = theta1motor;
-    Simulink_PlotVar2 = theta2motor;
-    Simulink_PlotVar3 = theta3motor;
-    Simulink_PlotVar4 = theta1d;
     mycount++;
 
 }
