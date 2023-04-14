@@ -208,6 +208,42 @@ float FxN= 0;
 float FyN= 0;
 float FzN= 0;
 
+float xn = 0;
+float yn = 0;
+float zn = 0;
+
+float xw = 0;
+float yw = 0;
+float zw = 0;
+float xdw = 0;
+float ydw = 0;
+float zdw = 0;
+
+float KPxn = 500.0;
+float KPyn = 500.0;
+float KPzn = 500.0;
+
+float KDxn = 50.0;
+float KDyn = 50.0;
+float KDzn = 50.0;
+
+float dirx = 0.0;
+float diry = 0.0;
+float dirz = 0.0;
+
+float xa = 0.2;
+float ya = 0.1;
+float za = 0.3;
+
+float xb = 0.4;
+float yb = -0.1;
+float zb = 0.3;
+
+float speed = 0.15;
+float t_start = 0.0;
+float t_total = 0.0;
+int state = 0; //0 is heading to b, 1 is heading to a
+
 typedef struct steptraj_s {
     long double b[5];
     long double a[5];
@@ -366,13 +402,14 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
 //    Ik2 = Ikold2+(err2-err_old2)/2.0*0.001;
 //    Ik3 = Ikold3+(err3-err_old3)/2.0*0.001;
 
+
     //friction
     if (Omega1 > 0.1) {
      u_fric1 = Viscous_positive1*Omega1 + Coulomb_positive1;
     } else if (Omega1 < -0.1) {
      u_fric1 = Viscous_negative1*Omega1 + Coulomb_negative1;
     } else {
-     u_fric1 = 3.6*Omega1;
+     u_fric1 = v_co_1*Omega1;
     }
 
     if (Omega2 > 0.05) {
@@ -409,19 +446,99 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
     RT33 = R33 = cosx*cosy;
 
 
+//    //Task Space PD Control
+//    xd = 0.254;
+//    yd = 0.254;
+//    zd = 0.254;
+//
+//
+//    x = (127.0*cos(theta1motor)*(cos(theta3motor) + sin(theta2motor)))/500.0;
+//    y = (127.0*sin(theta1motor)*(cos(theta3motor) + sin(theta2motor)))/500.0;
+//    z = (127.0*cos(theta2motor))/500.0 - (127.0*sin(theta3motor))/500.0 + 127.0/500.0;
+//
+//    x_dot = (x - x_old)/0.001;
+//    x_dot = (x_dot + x_dot_old + x_dot_old2)/3.0;
+//    x_old = x;
+//    //order matters here. Because we are saving the old value first before overriding it
+//    x_dot_old2 = x_dot_old;
+//    x_dot_old = x_dot;
+//
+//    y_dot = (y - y_old)/0.001;
+//    y_dot = (y_dot + y_dot_old + y_dot_old2)/3.0;
+//    y_old = y;
+//    //order matters here. Because we are saving the old value first before overriding it
+//    y_dot_old2 = y_dot_old;
+//    y_dot_old = y_dot;
+//
+//    z_dot = (z - z_old)/0.001;
+//    z_dot = (z_dot + z_dot_old + z_dot_old2)/3.0;
+//    z_old = z;
+//    //order matters here. Because we are saving the old value first before overriding it
+//    z_dot_old2 = z_dot_old;
+//    z_dot_old = z_dot;
+//
+//    Fx = KPx*(xd-x) + KDx*(xd_dot - x_dot);
+//    Fy = KPy*(yd-y) + KDy*(yd_dot - y_dot);
+//    Fz = KPz*(zd-z) + KDz*(zd_dot - z_dot);
+//
+//    JF1 = (-0.254*sin(theta1motor)*(cos(theta3motor)+sin(theta2motor)))*Fx
+//            + (0.254*cos(theta1motor)*(cos(theta3motor)+sin(theta2motor)))*Fy + 0*Fz;
+//    JF2 = (0.254*cos(theta1motor)*(cos(theta2motor)-sin(theta3motor)))*Fx
+//            + (0.254*sin(theta1motor)*(cos(theta2motor)-sin(theta3motor)))*Fy
+//            - 0.254*(cos(theta3motor)+sin(theta2motor))*Fz;
+//    JF3 = - 0.254*sin(theta3motor)*cos(theta1motor)*Fx - 0.254*sin(theta1motor)*sin(theta3motor)*Fy
+//            - 0.254*cos(theta3motor)*Fz;
 
-    //Task Space PD Control
-    xd = 0.254;
-    yd = 0.254;
-    zd = 0.254;
 
-    x = (127.0*cos(theta1motor)*(cos(theta3motor) + sin(theta2motor)))/500.0;
-    y = (127.0*sin(theta1motor)*(cos(theta3motor) + sin(theta2motor)))/500.0;
-    z = (127.0*cos(theta2motor))/500.0 - (127.0*sin(theta3motor))/500.0 + 127.0/500.0;
+//    JFZ1 = 0*FZcmd/Kt;
+//    JFZ2 = -0.254*(cos(theta3motor)+sin(theta2motor))*FZcmd/Kt;
+//    JFZ3 = -0.254*cos(theta3motor)*FZcmd/Kt;
 
-    xn = RT11*xn+RT12*yn+RT13*zn;
-    yn = RT21*xn+RT22*yn+RT23*zn;
-    zn = RT31*xn+RT32*yn+RT33*zn;
+
+    // Straight Line Trajectory
+    t = mycount * 0.001;
+    if((t-t_start) > t_total) {
+        if(state == 0) { // We got to point b
+            state = 1; // Now heading to a
+        } else{
+            state = 0;
+        }
+        t_start = t;
+    }
+    if (state == 0) {
+        dirx = xb - xa;
+        diry = yb - ya;
+        dirz = zb - za;
+        t_total = sqrt(dirx*dirx + diry*diry + dirz*dirz)/speed;
+        xdw = dirx * (t-t_start) / t_total + xa;
+        ydw = diry * (t-t_start) / t_total + ya;
+        zdw = dirz * (t-t_start) / t_total + za;
+    } else if (state == 1) {
+        dirx = xa - xb;
+        diry = ya - yb;
+        dirz = za - zb;
+        t_total = sqrt(dirx*dirx + diry*diry + dirz*dirz)/speed;
+        xdw = dirx * (t-t_start) / t_total + xb;
+        ydw = diry * (t-t_start) / t_total + yb;
+        zdw = dirz * (t-t_start) / t_total + zb;
+    }
+
+
+    //Task Space PD Control rotation
+//    xdw = 0.254;
+//    ydw = 0.254;
+//    zdw = 0.254;
+    xd = RT11*xdw+RT12*ydw+RT13*zdw;
+    yd = RT21*xdw+RT22*ydw+RT23*zdw;
+    zd = RT31*xdw+RT32*ydw+RT33*zdw;
+
+    xw = (127.0*cos(theta1motor)*(cos(theta3motor) + sin(theta2motor)))/500.0;
+    yw= (127.0*sin(theta1motor)*(cos(theta3motor) + sin(theta2motor)))/500.0;
+    zw = (127.0*cos(theta2motor))/500.0 - (127.0*sin(theta3motor))/500.0 + 127.0/500.0;
+
+    x = RT11*xw+RT12*yw+RT13*zw;
+    y = RT21*xw+RT22*yw+RT23*zw;
+    z = RT31*xw+RT32*yw+RT33*zw;
 
     x_dot = (x - x_old)/0.001;
     x_dot = (x_dot + x_dot_old + x_dot_old2)/3.0;
@@ -444,21 +561,14 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
     z_dot_old2 = z_dot_old;
     z_dot_old = z_dot;
 
-    Fx = KPx*(xd-x) + KDx*(xd_dot - x_dot);
-    Fy = KPy*(yd-y) + KDy*(yd_dot - y_dot);
-    Fz = KPz*(zd-z) + KDz*(zd_dot - z_dot);
-    //rotation
-    FxN= RT11*Fx+RT12*Fy+RT13*Fz;
-    FyN= RT21*Fx+RT22*Fy+RT23*Fz;
-    FzN= RT31*Fx+RT32*Fy+RT33*Fz;
+    Fx = KPxn*(xd-x) + KDxn*(xd_dot - x_dot);
+    Fy = KPyn*(yd-y) + KDyn*(yd_dot - y_dot);
+    Fz = KPzn*(zd-z) + KDzn*(zd_dot - z_dot);
+    //rotation back to the world
+    FxN= R11*Fx+R12*Fy+R13*Fz;
+    FyN= R21*Fx+R22*Fy+R23*Fz;
+    FzN= R31*Fx+R32*Fy+R33*Fz;
 
-//    JF1 = (-0.254*sin(theta1motor)*(cos(theta3motor)+sin(theta2motor)))*Fx
-//            + (0.254*cos(theta1motor)*(cos(theta3motor)+sin(theta2motor)))*Fy + 0*Fz;
-//    JF2 = (0.254*cos(theta1motor)*(cos(theta2motor)-sin(theta3motor)))*Fx
-//            + (0.254*sin(theta1motor)*(cos(theta2motor)-sin(theta3motor)))*Fy
-//            - 0.254*(cos(theta3motor)+sin(theta2motor))*Fz;
-//    JF3 = - 0.254*sin(theta3motor)*cos(theta1motor)*Fx - 0.254*sin(theta1motor)*sin(theta3motor)*Fy
-//            - 0.254*cos(theta3motor)*Fz;
     JF1 = (-0.254*sin(theta1motor)*(cos(theta3motor)+sin(theta2motor)))*FxN
             + (0.254*cos(theta1motor)*(cos(theta3motor)+sin(theta2motor)))*FyN + 0*FzN;
     JF2 = (0.254*cos(theta1motor)*(cos(theta2motor)-sin(theta3motor)))*FxN
@@ -467,14 +577,9 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
     JF3 = - 0.254*sin(theta3motor)*cos(theta1motor)*FxN - 0.254*sin(theta1motor)*sin(theta3motor)*FyN
             - 0.254*cos(theta3motor)*FzN;
 
-    JFZ1 = 0*FZcmd/Kt;
-    JFZ2 = -0.254*(cos(theta3motor)+sin(theta2motor))*FZcmd/Kt;
-    JFZ3 = -0.254*cos(theta3motor)*FZcmd/Kt;
-
-
-    *tau1 = JF1 + ff*u_fric1 + JFZ1;
-    *tau2 = JF2 + ff*u_fric2 + JFZ2;
-    *tau3 = JF3 + ff*u_fric3 + JFZ3;
+    *tau1 = JF1 + ff*u_fric1;
+    *tau2 = JF2 + ff*u_fric2;
+    *tau3 = JF3 + ff*u_fric3;
 
 //    new traj
 //    if (switch_control == 1) {

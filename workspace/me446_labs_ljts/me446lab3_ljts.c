@@ -175,7 +175,7 @@ float costheta32 = 0;
 float step1 = 0;
 float step2 = 0;
 
-float switch_control = 0;
+float switch_control = 1;
 
 float kp1f = 300;
 float kp2f = 300;
@@ -323,53 +323,53 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
 //        }
 //    }
 //    new trajectory
-    if((mycount%4000)==0) {
-        if(step1 > 0.26) {
-            step1 = 0.25;
-        } else {
-            step1 = 0.85;
-        }
-    }
-    if((mycount%4000)==0) {
-        if(step2 < 0.29) {
-            step2 = 0.3;
-        } else {
-            step2 = -0.3;
-        }
-    }
-
-
-    implement_discrete_tf(&trajectory, step1, &qd, &qddot, &qdddot);
-    theta1d = qd;
-    thetadot = qddot;
-    thetaddot = qdddot;
-    implement_discrete_tf(&trajectory2, step2, &qd, &qddot, &qdddot);
-    theta3d = qd;
-    theta3dot = qddot;
-    theta3ddot = qdddot;
-
-    // cubic trajectory oscillating between two points
-//    if (t < 1) {
-//        home_traj = 0;
-//    } else {
-//        home_traj = 1;
+//    if((mycount%4000)==0) {
+//        if(step1 > 0.26) {
+//            step1 = 0.25;
+//        } else {
+//            step1 = 0.85;
+//        }
 //    }
-//
-//    if(home_traj) {
-//        a3 = 1;
-//        a2 = -4.5;
-//        a1 = 6;
-//        a0 = -2;
-//        theta1d = a0+a1*t+a2*pow(t,2)+a3*pow(t,3);
-//        thetadot = a1+2*a2*t+3*a3*pow(t,2);
-//        thetaddot = 2*a2+6*a3*t;
-//    } else {
-//        a2 = 1.5;
-//        a3 = -1;
-//        theta1d = a2*pow(t,2)+a3*pow(t,3);
-//        thetadot = 2*a2*t+3*a3*pow(t,2);
-//        thetaddot = 2*a2+6*a3*t;
+//    if((mycount%4000)==0) {
+//        if(step2 < 0.29) {
+//            step2 = 0.3;
+//        } else {
+//            step2 = -0.3;
+//        }
 //    }
+
+
+//    implement_discrete_tf(&trajectory, step1, &qd, &qddot, &qdddot);
+//    theta1d = qd;
+//    thetadot = qddot;
+//    thetaddot = qdddot;
+//    implement_discrete_tf(&trajectory2, step2, &qd, &qddot, &qdddot);
+//    theta3d = qd;
+//    theta3dot = qddot;
+//    theta3ddot = qdddot;
+
+   //  cubic trajectory oscillating between two points
+    if (t < 1) {
+        home_traj = 0;
+    } else {
+        home_traj = 1;
+    }
+
+    if(home_traj) {
+        a3 = 1;
+        a2 = -4.5;
+        a1 = 6;
+        a0 = -2;
+        theta1d = a0+a1*t+a2*pow(t,2)+a3*pow(t,3);
+        thetadot = a1+2*a2*t+3*a3*pow(t,2);
+        thetaddot = 2*a2+6*a3*t;
+    } else {
+        a2 = 1.5;
+        a3 = -1;
+        theta1d = a2*pow(t,2)+a3*pow(t,3);
+        thetadot = 2*a2*t+3*a3*pow(t,2);
+        thetaddot = 2*a2+6*a3*t;
+    }
 
 
 //    if((mycount%1000)==0) {
@@ -396,24 +396,24 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
 //        }
 //    }
 
-//    err1 = theta1d-theta1motor;
-//    err2 = theta1d-theta2motor;
-//    err3 = theta1d-theta3motor;
-//    err_dot1 = thetadot - Omega1;
-//    err_dot2 = thetadot - Omega2;
-//    err_dot3 = thetadot - Omega3;
-
     err1 = theta1d-theta1motor;
     err2 = theta1d-theta2motor;
-    err3 = theta3d-theta3motor;
-
+    err3 = theta1d-theta3motor;
     err_dot1 = thetadot - Omega1;
     err_dot2 = thetadot - Omega2;
-    err_dot3 = theta3dot - Omega3;
+    err_dot3 = thetadot - Omega3;
 
-    Ik1 = Ikold1+(err1-err_old1)/2.0*0.001;
-    Ik2 = Ikold2+(err2-err_old2)/2.0*0.001;
-    Ik3 = Ikold3+(err3-err_old3)/2.0*0.001;
+//    err1 = theta1d-theta1motor;
+//    err2 = theta1d-theta2motor;
+//    err3 = theta3d-theta3motor;
+//
+//    err_dot1 = thetadot - Omega1;
+//    err_dot2 = thetadot - Omega2;
+//    err_dot3 = theta3dot - Omega3;
+//
+//    Ik1 = Ikold1+(err1-err_old1)/2.0*0.001;
+//    Ik2 = Ikold2+(err2-err_old2)/2.0*0.001;
+//    Ik3 = Ikold3+(err3-err_old3)/2.0*0.001;
 
     //friction
     if (Omega1 > 0.1) {
@@ -445,7 +445,7 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
 //    *tau3 = u_fric3;
 
 
-//    // feed forward
+//    // feedforward
 //    if (fabs(err1) < threshold1) {
 //        ptau1 = kp1*(err1) - kd1*Omega1 + ki1*Ik1+thetaddot*J1;
 //    }  else {
@@ -507,34 +507,6 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
 //        ptau3 = kp3f*(err3) + kd3f*err_dot3+thetaddot*J3;
 //    }
 
-    ////    fun
-//    ptau1 = kp1*(err1) - kd1*Omega1;
-//    ptau2 = kp2*(err2) - kd2*Omega2;
-//    ptau3 = kp3*(err3) - kd3*Omega3;
-    // Saturation of torque values
-//    if (ptau1 > 5) {
-//        ptau1 = 5;
-//        Ik1 = Ikold1;
-//    } else if (ptau1 < -5) {
-//        ptau1 = -5;
-//        Ik1 = Ikold1;
-//    }
-//
-//    if (ptau2 > 5) {
-//        ptau2 = 5;
-//        Ik2 = Ikold2;
-//    } else if (ptau2 < -5) {
-//        ptau2 = -5;
-//        Ik2 = Ikold2;
-//    }
-//
-//    if (ptau3 > 5) {
-//        ptau3 = 5;
-//        Ik3 = Ikold3;
-//    } else if (ptau3 < -5) {
-//        ptau3 = -5;
-//        Ik3 = Ikold3;
-//    }
 
     *tau1 = ptau1;
     *tau2 = ptau2;
@@ -549,16 +521,16 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
     err_old3 = err3;
 
     // When we want to plot error
-    Simulink_PlotVar1 = err1;
-    Simulink_PlotVar2 = err2;
-    Simulink_PlotVar3 = err3;
-//    Simulink_PlotVar4 = theta1d;
+//    Simulink_PlotVar1 = err1;
+//    Simulink_PlotVar2 = err2;
+//    Simulink_PlotVar3 = err3;
+////    Simulink_PlotVar4 = theta1d;
 
     // When we want to plot actual vs desired angles
-//    Simulink_PlotVar1 = theta1motor;
-//    Simulink_PlotVar2 = theta2motor;
-//    Simulink_PlotVar3 = theta3motor;
-//    Simulink_PlotVar4 = theta1d;
+    Simulink_PlotVar1 = theta1motor;
+    Simulink_PlotVar2 = theta2motor;
+    Simulink_PlotVar3 = theta3motor;
+    Simulink_PlotVar4 = theta1d;
 
     mycount++;
 
