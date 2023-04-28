@@ -5,8 +5,8 @@
 #define TWOPI       6.283185307179586476925286766559
 #define HALFPI      1.5707963267948966192313216916398
 #define GRAV        9.81
-#define num_points  7
-#define d_speed     0.1
+#define num_points  32 // Need to update this every time we add points
+#define d_speed     0.2
 
 // These two offsets are only used in the main file user_CRSRobot.c  You just need to create them here and find the correct offset and then these offset will adjust the encoder readings
 float offset_Enc2_rad = -0.4454;
@@ -171,7 +171,7 @@ float JF3 = 0.0;
 
 float ff = 0.8;
 float Kt = 6.0;
-float FZcmd = 12.0; // Gravity comp constant
+float FZcmd = 0.0;
 float JFZ1 = 0.0;
 float JFZ2 = 0.0;
 float JFZ3 = 0.0;
@@ -272,14 +272,37 @@ typedef struct points {
 // Mode 1: Waiting 1 second
 // Mode 2: Weakening in x and y
 
+// To ensure correct position of zigzag, both ends should be 20.5cm from the edge of the table
+
 point my_points [num_points] =
-    {{0.137, 0.00, 0.422, 0.0, 0},
+    {{0.137, 0.00, 0.422, 0.0, 0}, // Zero Position
     {0.260, 0.00, 0.500, 0.0, 0}, // Zero DH Position
-    {0.0289, 0.3498, 0.1890, 0.0, 0}, // Above hole
+    {0.0289, 0.3498, 0.250, 0.0, 0}, // Above hole
     {0.0289, 0.3497, 0.1350, 0.0, 2},// In hole
     {0.0289, 0.3497, 0.1350, 0.0, 1},// In hole
-    {0.0289, 0.3498, 0.1890, 0.0, 0}, // Return to Above Hole
-    {0.260, 0.00, 0.500, 0.0, 0} // Return to Zero DH Position
+    {0.0289, 0.3498, 0.1890, 0.0, 2}, // Return to Above Hole
+    {0.173, 0.1136, 0.475, 0.0, 0}, // Going around cardboard box
+    {0.375, 0.115, 0.21, 0.0, 0}, // Start of zig-zag
+    {0.39, 0.09, 0.21, 50.0, 6}, // First point in zig-zag, P1 after linear stretch
+    {0.40, 0.069, 0.21, 0.0, 6}, // P2, Before Curve 1
+    {0.405, 0.065, 0.21, 0.0, 6}, // P3
+    {0.404, 0.0605, 0.21, 0.0, 6}, // P4
+    {0.402, 0.056, 0.21, 0.0, 6}, // P5
+    {0.397, 0.053, 0.21, 0.0, 6}, // P6
+    {0.390, 0.050, 0.21, 0.0, 6}, // P7
+    {0.328, 0.0625, 0.21, 0.0, 0}, // P8, Before Curve 2
+    {0.321, 0.060, 0.21, 0.0, 0}, // P9
+    {0.317, 0.05, 0.21, 0.0, 0}, // P10
+    {0.316, 0.043, 0.21, 0.0, 0}, // P11
+    {0.3185, 0.0374, 0.21, 0.0, 0}, // P12
+    {0.374, -0.02, 0.21, 0.0, 0}, // P13, out of curve
+    {0.395, -0.055, 0.277, 0.0, 0}, // Lifted up after curve
+    {0.242, 0.187, 0.375, 0.0, 0}, // Above Egg
+    {0.242, 0.187, 0.31, 0.0, 0}, // Closer to Egg
+    {0.242, 0.187, 0.29, 0.0, 3}, // Applying z force to egg
+    {0.242, 0.187, 0.29, 0.0, 4}, // Holding on top of egg
+    {0.137, 0.00, 0.422, 0.0, 1}, // Return to Zero DH Position
+    {0.137, 0.00, 0.422, 0.0, 5} // Stay at Zero DH Position
 };
 
 // This function is called every 1 ms
@@ -335,45 +358,8 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
     Omega3_old1 = Omega3;
 
 
-//    t = (mycount%2000)*0.001;
-////    new trajectory
-//    if((mycount%4000)==0) {
-//        if(step1 > 0.26) {
-//            step1 = 0.25;
-//        } else {
-//            step1 = 0.85;
-//        }
-//    }
-//    if((mycount%4000)==0) {
-//        if(step2 < 0.29) {
-//            step2 = 0.3;
-//        } else {
-//            step2 = -0.3;
-//        }
-//    }
 
 
-//    implement_discrete_tf(&trajectory, step1, &qd, &qddot, &qdddot);
-//    theta1d = qd;
-//    thetadot = qddot;
-//    thetaddot = qdddot;
-//    implement_discrete_tf(&trajectory2, step2, &qd, &qddot, &qdddot);
-//    theta3d = qd;
-//    theta3dot = qddot;
-//    theta3ddot = qdddot;
-//
-//
-//    err1 = theta1d-theta1motor;
-//    err2 = theta1d-theta2motor;
-//    err3 = theta3d-theta3motor;
-//
-//    err_dot1 = thetadot - Omega1;
-//    err_dot2 = thetadot - Omega2;
-//    err_dot3 = theta3dot - Omega3;
-//
-//    Ik1 = Ikold1+(err1-err_old1)/2.0*0.001;
-//    Ik2 = Ikold2+(err2-err_old2)/2.0*0.001;
-//    Ik3 = Ikold3+(err3-err_old3)/2.0*0.001;
 
 
     //friction
@@ -401,6 +387,85 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
      u_fric3 = v_co_3*Omega3;
     }
 
+    // Final Project Trajectory Generation Following Point List
+    t = mycount * 0.001;
+
+    xa = my_points[i].xb;
+    ya = my_points[i].yb;
+    za = my_points[i].zb;
+    xb = my_points[i+1].xb;
+    yb = my_points[i+1].yb;
+    zb = my_points[i+1].zb;
+
+    thetaz = 0.0;
+
+    // Set parameters based on desired movement mode
+    if (my_points[i+1].mode == 0) {  // Mode 0: Normal speed, no weakening
+        speed = d_speed;
+        KPx = 500.0;
+        KPy = 500.0;
+        KPz = 500.0;
+        KDx = 10.0;
+        KDy = 10.0;
+        KDz = 10.0;
+        FZcmd = 0.0;
+    } else if (my_points[i+1].mode == 1) {   // Mode 1: Waiting 1 second
+        speed = 0.0;
+        KPx = 500.0;
+        KPy = 500.0;
+        KPz = 500.0;
+        KDx = 10.0;
+        KDy = 10.0;
+        KDz = 10.0;
+        FZcmd = 0.0;
+    } else if (my_points[i+1].mode == 2) {   // Mode 2: Weakening in x and y
+        speed = d_speed;
+        KPx = 50.0;
+        KPy = 50.0;
+        KPz = 500.0;
+        KDx = 1.0;
+        KDy = 1.0;
+        KDz = 10.0;
+        FZcmd = 0.0;
+    } else if (my_points[i+1].mode == 3) {   // Mode 3: Z down force
+        speed = 0.05;
+        KPx = 500.0;
+        KPy = 500.0;
+        KPz = 500.0;
+        KDx = 10.0;
+        KDy = 10.0;
+        KDz = 10.0;
+        FZcmd = -13.0;
+    } else if (my_points[i+1].mode == 4) {   // Mode 4: Z down force and wait for egg
+        speed = 0.0;
+        KPx = 500.0;
+        KPy = 500.0;
+        KPz = 500.0;
+        KDx = 10.0;
+        KDy = 10.0;
+        KDz = 10.0;
+        FZcmd = -13.0;
+    } else if (my_points[i+1].mode == 5) {   // Mode 5: Z down force and wait for egg
+        speed = 0.0;
+        KPx = 500.0;
+        KPy = 500.0;
+        KPz = 500.0;
+        KDx = 10.0;
+        KDy = 10.0;
+        KDz = 10.0;
+        FZcmd = 0.0;
+    } else if (my_points[i+1].mode == 6) {   // Mode 6: Impedance control to soften x
+        speed = d_speed;
+        KPx = 250.0;
+        KPy = 250.0;
+        KPz = 500.0;
+        KDx = 5.0;
+        KDy = 5.0;
+        KDz = 10.0;
+        FZcmd = 0.0;
+//        thetaz = -atan2((xa-xb),(ya-yb));
+    }
+
     //rotation to new frame
     cosz = cos(thetaz);
     sinz = sin(thetaz);
@@ -418,48 +483,15 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
     RT23 = R32 = sinx;
     RT33 = R33 = cosx*cosy;
 
-    // Final Project Trajectory Generation Following Point List
-    t = mycount * 0.001;
-
-    // Set parameters based on desired movement mode
-    if (my_points[i+1].mode == 0) {  // Mode 0: Normal speed, no weakening
-        speed = d_speed;
-        KPx = 500.0;
-        KPy = 500.0;
-        KPz = 500.0;
-        KDx = 10.0;
-        KDy = 10.0;
-        KDz = 10.0;
-    } else if (my_points[i+1].mode == 1) {   // Mode 1: Waiting 1 second
-        speed = 0.0;
-        KPx = 500.0;
-        KPy = 500.0;
-        KPz = 500.0;
-        KDx = 10.0;
-        KDy = 10.0;
-        KDz = 10.0;
-    } else if (my_points[i+1].mode == 2) {   // Mode 2: Weakening in x and y
-        speed = d_speed;
-        KPx = 50.0;
-        KPy = 50.0;
-        KPz = 500.0;
-        KDx = 1.0;
-        KDy = 1.0;
-        KDz = 10.0;
-    }
-
-    xa = my_points[i].xb;
-    ya = my_points[i].yb;
-    za = my_points[i].zb;
-    xb = my_points[i+1].xb;
-    yb = my_points[i+1].yb;
-    zb = my_points[i+1].zb;
-
     dirx = xb - xa;
     diry = yb - ya;
     dirz = zb - za;
     if (my_points[i+1].mode == 1) {
-        t_total = 5.0;
+        t_total = 0.5;
+    } else if (my_points[i+1].mode == 4) {
+        t_total = 2;
+    } else if (my_points[i+1].mode == 5) {
+        t_total = 50;
     } else {
         t_total = sqrt(dirx*dirx + diry*diry + dirz*dirz)/speed;
     }
@@ -525,19 +557,28 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
     JF3 = - 0.254*sin(theta3motor)*cos(theta1motor)*FxN - 0.254*sin(theta1motor)*sin(theta3motor)*FyN
             - 0.254*cos(theta3motor)*FzN;
 
+    if (end == 1) {
+        FZcmd = 12;
+    }
+
     JFZ1 = 0*FZcmd/Kt;
     JFZ2 = -0.254*(cos(theta3motor)+sin(theta2motor))*FZcmd/Kt;
     JFZ3 = -0.254*cos(theta3motor)*FZcmd/Kt;
 
     if (end == 1) {
         *tau1 = JFZ1;
-        *tau2 = -0.254*(cos(theta3motor)+sin(theta2motor))*FZcmd/Kt;
-        *tau3 = -0.254*cos(theta3motor)*FZcmd/Kt;
+        *tau2 = JFZ2;
+        *tau3 = JFZ3;
     } else {
-        *tau1 = JF1 + ff*u_fric1;
-        *tau2 = JF2 + ff*u_fric2;
-        *tau3 = JF3 + ff*u_fric3;
+        *tau1 = JF1 + ff*u_fric1 + JFZ1;
+        *tau2 = JF2 + ff*u_fric2 + JFZ2;
+        *tau3 = JF3 + ff*u_fric3 + JFZ3;
     }
+
+    // When we want to move it by hand
+//    *tau1 = 0;
+//    *tau2 = 0;
+//    *tau3 = 0;
 
     // When we want to plot error
     Simulink_PlotVar1 = xd-x;

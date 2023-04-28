@@ -184,9 +184,9 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
     theta3 = motortheta3 - motortheta2 + PI/2;
 
     // Set desired theta to IK calculated thetas for fun trajectory
-    theta1d = motortheta1;
-    theta2d = motortheta2;
-    theta3d = motortheta3;
+//    theta1d = motortheta1;
+//    theta2d = motortheta2;
+//    theta3d = motortheta3;
 
     // Velocity filtering
     Omega1 = (theta1motor - Theta1_old)/0.001;
@@ -213,31 +213,31 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
 
     // Cubic trajectory; this moves all the joints from 0 to 0.5 in a cubic motion
 
-//    t = (mycount%2000)*0.001;
-//
-//    if ( t < 1) {
-//        home_traj = 0;
-//    } else {
-//        home_traj = 1;
-//    }
-//
-//    if(home_traj) {
-//        a3 = 1;
-//        a2 = -4.5;
-//        a1 = 6;
-//        a0 = -2;
-//        theta1d = a0+a1*t+a2*pow(t,2)+a3*pow(t,3);
-//        thetadot = a1+2*a2*t+3*a3*pow(t,2);
-//        thetaddot = 2*a2+6*a3*t;
-//    } else {
-//        a2 = 1.5;
-//        a3 = -1;
-//        theta1d = a2*pow(t,2)+a3*pow(t,3);
-//        thetadot = 2*a2*t+3*a3*pow(t,2);
-//        thetaddot = 2*a2+6*a3*t;
-//    }
+    t = (mycount%2000)*0.001;
 
-    // Step input trajectory
+    if ( t < 1) {
+        home_traj = 0;
+    } else {
+        home_traj = 1;
+    }
+
+    if(home_traj) {
+        a3 = 1;
+        a2 = -4.5;
+        a1 = 6;
+        a0 = -2;
+        theta1d = a0+a1*t+a2*pow(t,2)+a3*pow(t,3);
+        thetadot = a1+2*a2*t+3*a3*pow(t,2);
+        thetaddot = 2*a2+6*a3*t;
+    } else {
+        a2 = 1.5;
+        a3 = -1;
+        theta1d = a2*pow(t,2)+a3*pow(t,3);
+        thetadot = 2*a2*t+3*a3*pow(t,2);
+        thetaddot = 2*a2+6*a3*t;
+    }
+
+//    // Step input trajectory
 //    if((mycount%1000)==0) {
 //        if(theta1d > 0.1) {
 //            theta1d = 0;
@@ -264,14 +264,14 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
 //    }
 
     // Error when using a single desired trajectory for all 3 thetas (cubic trajectory only)
-//    err1 = theta1d-theta1motor;
-//    err2 = theta1d-theta2motor;
-//    err3 = theta1d-theta3motor;
+    err1 = theta1d-theta1motor;
+    err2 = theta1d-theta2motor;
+    err3 = theta1d-theta3motor;
 
     // Error for 3 separate desired theta functions (step input and fun trajectory)
-    err1 = theta1d-theta1motor;
-    err2 = theta2d-theta2motor;
-    err3 = theta3d-theta3motor;
+//    err1 = theta1d-theta1motor;
+//    err2 = theta2d-theta2motor;
+//    err3 = theta3d-theta3motor;
 
     err_dot1 = thetadot - Omega1;
     err_dot2 = thetadot - Omega2;
@@ -330,10 +330,6 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
 //    ptau2 = kp2*(err2) - kd2*Omega2;
 //    ptau3 = kp3*(err3) - kd3*Omega3;
 
-    //    PID control for step trajectory but i dont think this works
-//        ptau1 = kp1*(err1) - kd1*Omega1 + ki1*Ik1;
-//        ptau2 = kp2*(err2) - kd2*Omega2 + ki2*Ik2;
-//        ptau3 = kp3*(err3) - kd3*Omega3 + ki3*Ik3;
 
     // Saturation of torque values
     if (ptau1 > 5) {
@@ -372,15 +368,16 @@ void lab(float theta1motor,float theta2motor,float theta3motor,float *tau1,float
     err_old2 = err2;
     err_old3 = err3;
 
-    Simulink_PlotVar1 = theta1motor;
-    Simulink_PlotVar2 = theta2motor;
-    Simulink_PlotVar3 = theta1d;
+//    Simulink_PlotVar1 = theta1motor;
+//    Simulink_PlotVar2 = theta2motor;
+//    Simulink_PlotVar3 = theta1d;
+//    Simulink_PlotVar4 = theta2d;
+
+    Simulink_PlotVar1 = err1;
+    Simulink_PlotVar2 = err2;
+    Simulink_PlotVar3 = err3;
     Simulink_PlotVar4 = theta2d;
 
-//    Simulink_PlotVar1 = motortheta1;
-//    Simulink_PlotVar2 = motortheta2;
-//    Simulink_PlotVar3 = motortheta3;
-//    Simulink_PlotVar4 = theta1motor;
     mycount++;
 
 }
